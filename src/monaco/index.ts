@@ -8,8 +8,12 @@ interface IMonacoStepper {
 }
 
 export let monaco: typeof Monaco
-export const NORMAL = 'debug-breakpoint'
-export const ACTIVE = NORMAL + '-active'
+
+export const enum Classes {
+  normal = 'debug-breakpoint',
+  active = 'debug-breakpoint-active',
+  disabled = 'debug-breakpoint-disabled'
+}
 
 class MonacoStepper {
   private editor: IMonacoStepper['editor']
@@ -32,7 +36,7 @@ class MonacoStepper {
         {
           range: new monaco.Range(0, 0, Infinity, 0),
           options: {
-            glyphMarginClassName: NORMAL
+            glyphMarginClassName: Classes.normal
           }
         }
       ]
@@ -41,7 +45,7 @@ class MonacoStepper {
 
   public addListeners() {
     const node = this.editor.getDomNode()
-    const breakpointTriggers = node.getElementsByClassName(NORMAL)
+    const breakpointTriggers = node.getElementsByClassName(Classes.normal)
     setInterval(() => {
       for (let i = 0; i < breakpointTriggers.length; i++) {
         const trigger = breakpointTriggers[i] as HTMLElement
@@ -55,10 +59,15 @@ class MonacoStepper {
       'line-numbers'
     )[0].innerText
 
+    const updateTrigger = (breakpoint = this.stepper.getBreakpoint(line)) => {
+      trigger.classList.toggle(Classes.active, !!breakpoint)
+      trigger.classList.toggle(Classes.disabled, breakpoint.disabled)
+    }
+
     trigger.onmousedown = () => {
-      const result = this.stepper.toggleBreakpoint(line)
-      console.log('clicked', line, result)
-      trigger.classList.toggle(ACTIVE)
+      console.log('clicked', line)
+      const breakpoint = this.stepper.toggleBreakpoint(line)
+      updateTrigger(breakpoint)
     }
   }
 }

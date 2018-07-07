@@ -13,7 +13,7 @@ class Stepper {
   public paused: boolean
   public breakpoints = new Array<Breakpoint>()
 
-  private stepper: Function
+  private debugger: Function
   private context: {
     line: number
     evalInContext: EvalInContext
@@ -22,7 +22,7 @@ class Stepper {
 
   constructor(inputCode: string) {
     const { stepper, lineCount } = stepped(inputCode, this.step.bind(this))
-    this.stepper = stepper
+    this.debugger = stepper
     this.lineCount = lineCount
   }
 
@@ -30,7 +30,7 @@ class Stepper {
    * Runs the script
    */
   public run() {
-    if (typeof this.paused !== 'boolean') this.stepper()
+    if (typeof this.paused !== 'boolean') this.debugger()
     this.resume()
   }
 
@@ -127,11 +127,10 @@ class Stepper {
     if (breakpoint) {
       const disabled = !breakpoint.disabled
       breakpoint.disabled = disabled
-      return !disabled
+      return breakpoint
     }
 
-    this.addBreakpoint(line)
-    return true
+    return this.addBreakpoint(line)
   }
 
   /**
