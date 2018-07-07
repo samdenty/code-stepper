@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "outDir": "lib",
+    "module": "commonjs",
+    "target": "es5",
+    "lib": ["es6", "dom"],
+    "inlineSourceMap": true,
+    "jsx": "react",
+    "declaration": true,
+    "moduleResolution": "node",
+    "rootDir": "src",
+    "forceConsistentCasingInFileNames": true,
+    "types": ["jest"]
+  },
+  "include": ["./src/**/*"]
+}
