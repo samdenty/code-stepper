@@ -48,8 +48,6 @@ const iterate = (ast: Program) => {
     }
   }
   recurse(ast)
-
-  circular = []
 }
 
 export default asyncify

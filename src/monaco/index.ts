@@ -12,7 +12,9 @@ export let monaco: typeof Monaco
 export const enum Classes {
   normal = 'debug-breakpoint',
   active = 'debug-breakpoint-active',
-  disabled = 'debug-breakpoint-disabled'
+  disabled = 'debug-breakpoint-disabled',
+
+  breaked = 'debug-breaked-line'
 }
 
 class MonacoStepper {
@@ -27,6 +29,32 @@ class MonacoStepper {
 
     this.addDecorators()
     this.addListeners()
+
+    this.stepper.on('paused', this.paused.bind(this))
+    this.stepper.on('resumed', this.resumed.bind(this))
+  }
+
+  private async paused() {
+    const line = await this.stepper.getLine()
+
+    console.log(line)
+    this.editor.deltaDecorations(
+      [],
+      [
+        {
+          range: new monaco.Range(line, 0, line, 0),
+          options: {
+            isWholeLine: true,
+            className: Classes.breaked,
+            glyphMarginClassName: 'myGlyphMarginClass'
+          }
+        }
+      ]
+    )
+  }
+
+  private resumed() {
+    console.log('resumed')
   }
 
   public addDecorators() {

@@ -1,3 +1,5 @@
+import EventEmitter from 'eventemitter3'
+
 import stepped from './util/stepped'
 
 type EvalInContext = (code: string) => any
@@ -8,7 +10,17 @@ export interface Breakpoint {
   condition?: string
 }
 
-class Stepper {
+export type Events =
+  | 'run'
+  | 'resumed'
+  | 'paused'
+  | 'context'
+  | 'breakpointAdded'
+  | 'breakpointRemoved'
+  | 'breakpointEnabled'
+  | 'breakpointDisabled'
+
+class Stepper extends EventEmitter<Events> {
   public lineCount: number
   public paused: boolean
   public breakpoints = new Array<Breakpoint>()
@@ -21,6 +33,7 @@ class Stepper {
   }
 
   constructor(inputCode: string) {
+    super()
     const { stepper, lineCount } = stepped(inputCode, this.step.bind(this))
     this.debugger = stepper
     this.lineCount = lineCount
@@ -32,6 +45,7 @@ class Stepper {
   public run() {
     if (typeof this.paused !== 'boolean') this.debugger()
     this.resume()
+    this.emit('run')
   }
 
   /**
@@ -41,12 +55,16 @@ class Stepper {
     this.paused = false
     if (this.context) this.context.resume()
     this.context = null
+    this.emit('resumed')
   }
 
   /**
    * Pauses script execution
    */
-  public pause = () => (this.paused = true)
+  public pause() {
+    this.paused = true
+    this.emit('paused')
+  }
 
   /**
    * Evaluates code in the paused context
@@ -61,8 +79,15 @@ class Stepper {
   /**
    * Gets the line number the debugger is paused on
    */
-  public get pausedLine() {
-    if (!this.context) return null
+  public getLine(): number | Promise<number> {
+    // If it's not paused, return null
+    if (!this.paused) return null
+
+    // If the context doesn't yet exist, return a promise
+    if (!this.context)
+      return new Promise(resolve =>
+        this.once('context', () => resolve(this.context.line))
+      )
 
     return this.context.line
   }
@@ -94,7 +119,10 @@ class Stepper {
       condition
     })
 
-    return this.breakpoints[index - 1]
+    const breakpoint = this.breakpoints[index - 1]
+    this.emit('breakpointAdded', breakpoint)
+
+    return breakpoint
   }
 
   /**
@@ -104,7 +132,10 @@ class Stepper {
   public removeBreakpoint(line: number) {
     const index = this.breakpoints.findIndex(b => b.line === line)
 
-    if (index > -1) this.breakpoints.splice(index, 1)
+    if (index > -1) {
+      this.emit('breakpointRemoved', line)
+      this.breakpoints.splice(index, 1)
+    }
   }
 
   /**
@@ -114,7 +145,25 @@ class Stepper {
   public enableBreakpoint(line: number) {
     const breakpoint = this.getBreakpoint(line)
 
-    if (breakpoint) breakpoint.disabled = false
+    if (breakpoint) {
+      this.emit('breakpointEnabled', breakpoint)
+      breakpoint.disabled = false
+    }
+    return breakpoint
+  }
+
+  /**
+   * Disables a breakpoint for a given line
+   * @param line Line number to enable
+   */
+  public disableBreakpoint(line: number) {
+    const breakpoint = this.getBreakpoint(line)
+
+    if (breakpoint) {
+      this.emit('breakpointDisabled', breakpoint)
+      breakpoint.disabled = true
+    }
+    return breakpoint
   }
 
   /**
@@ -125,22 +174,12 @@ class Stepper {
     const breakpoint = this.getBreakpoint(line)
 
     if (breakpoint) {
-      const disabled = !breakpoint.disabled
-      breakpoint.disabled = disabled
-      return breakpoint
+      return breakpoint.disabled
+        ? this.enableBreakpoint(line)
+        : this.disableBreakpoint(line)
     }
 
     return this.addBreakpoint(line)
-  }
-
-  /**
-   * Disables a breakpoint for a given line
-   * @param line Line number to enable
-   */
-  public disableBreakpoint(line: number) {
-    const breakpoint = this.getBreakpoint(line)
-
-    if (breakpoint) breakpoint.disabled = true
   }
 
   /**
@@ -167,6 +206,7 @@ class Stepper {
           line,
           resume
         }
+        this.emit('context', this.context)
       })
   }
 }
