@@ -1,18 +1,35 @@
-import Stepper from '../src'
+import Stepper, { MonacoStepper } from '../src'
+import loadMonaco from './monaco'
 
-const stepper = new Stepper(`
+async function main() {
+  const monaco = await loadMonaco()
+
+  const code = `
   function asd() {
     function nested() {
-      return btoa('asd')
+      return btoa('testing')
     }
     setInterval(() => {
-      console.log(+new Date()+'timer')
+      console.log('timer')
     }, 500)
     return nested()
   }
 
   console.log(asd())
-`)
+`
 
-stepper.run()
-;(window as any).stepper = stepper
+  const editor = monaco.editor.create(document.getElementById('demo'), {
+    value: code,
+    language: 'javascript'
+  })
+
+  const monacoStepper = new MonacoStepper({ monaco, editor }, code)
+
+  // Debugging
+  ;(window as any).monacoStepper = monacoStepper
+  ;(window as any).stepper = monacoStepper.stepper
+  ;(window as any).editor = editor
+  ;(window as any).monaco = monaco
+}
+
+main()

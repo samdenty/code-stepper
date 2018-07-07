@@ -85,13 +85,16 @@ class Stepper {
 
     if (existing) {
       existing.condition = condition
-    } else {
-      this.breakpoints.push({
-        line,
-        disabled: false,
-        condition
-      })
+      return existing
     }
+
+    const index = this.breakpoints.push({
+      line,
+      disabled: false,
+      condition
+    })
+
+    return this.breakpoints[index - 1]
   }
 
   /**
@@ -112,6 +115,23 @@ class Stepper {
     const breakpoint = this.getBreakpoint(line)
 
     if (breakpoint) breakpoint.disabled = false
+  }
+
+  /**
+   * Toggles a breakpoint for a given line
+   * @param line Line number to toggle
+   */
+  public toggleBreakpoint(line: number) {
+    const breakpoint = this.getBreakpoint(line)
+
+    if (breakpoint) {
+      const disabled = !breakpoint.disabled
+      breakpoint.disabled = disabled
+      return !disabled
+    }
+
+    this.addBreakpoint(line)
+    return true
   }
 
   /**
